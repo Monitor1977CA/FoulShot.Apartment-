@@ -1,0 +1,27 @@
+{
+  "name": "foul-shot---characters-updated.v9.timeline.again",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react-redux": "^9.2.0",
+    "react": "^19.1.1",
+    "@reduxjs/toolkit": "^2.8.2",
+    "@google/genai": "^1.15.0",
+    "uuid": "^11.1.0",
+    "react-dom": "^19.1.1",
+    "lucide-react": "^0.542.0",
+    "@jest/globals": "^30.0.5",
+    "idb": "^8.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}
