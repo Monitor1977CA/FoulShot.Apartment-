@@ -45,7 +45,7 @@ import ForensicFindingModal from './components/organisms/modals/ForensicFindingM
 import LatentConnectionModal from './components/organisms/modals/LatentConnectionModal';
 import ErrorLogModal from './components/templates/ErrorLogView';
 import ADADebugFab from './components/organisms/ADAFab';
-import { ModalType, markIntroAsPlayed } from './store/uiSlice';
+import { ModalType, markIntroAsPlayed, setLocationPanelExpanded } from './store/uiSlice';
 import { 
   hydrateImageCache,
   preloadKeyStoryAssets,
@@ -82,7 +82,7 @@ const MODAL_COMPONENTS: { [key in ModalType]?: React.FC<any> } = {
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   // Select necessary state from the Redux store
-  const { activeModal, activeModalProps, introPlayed, activeView, activeCardType } = useSelector((state: RootState) => state.ui);
+  const { activeModal, activeModalProps, introPlayed, activeView, activeCardType, activeCardId } = useSelector((state: RootState) => state.ui);
   
   // On initial app load, hydrate the cache and start preloading assets.
   // The intro slideshow has been disabled to reduce initial image generation.
@@ -156,10 +156,27 @@ const App: React.FC = () => {
   // This is the definitive fix for the visibility of the location panel tab.
   // By checking if the active card is a 'location', we can conditionally adjust the layout.
   const isLocationCardActive = activeView === 'card' && activeCardType === 'location';
-  // When a location is active, we add padding to the bottom of the main content area.
-  // This padding creates space for the absolutely positioned details panel tab to be fully visible
-  // above the navigation bar, fixing a key UI layout issue.
   const mainContentLayoutClass = isLocationCardActive ? 'pb-16' : '';
+
+  // NOTE: Global BottomPanel experiment removed. Per-card panels are used instead.
+
+  // Debug overlay (temporary) to aid runtime diagnosis of blank/black screen.
+  const DebugOverlay: React.FC = () => {
+    const ui = useSelector((state: RootState) => state.ui);
+    const story = useSelector((state: RootState) => state.story);
+    const charCount = Object.values(story.characters.entities).filter(Boolean).length;
+    const objCount = Object.values(story.objects.entities).filter(Boolean).length;
+    const locCount = Object.values(story.locations.entities).filter(Boolean).length;
+
+    return (
+      <div className="fixed top-2 left-2 z-50 p-2 text-xs bg-white/90 text-black rounded shadow">
+        <div className="font-semibold">DEBUG</div>
+        <div>view: {ui.activeView} | cardType: {String(ui.activeCardType)}</div>
+        <div>cardId: {String(ui.activeCardId)}</div>
+        <div>chars: {charCount} objs: {objCount} locs: {locCount}</div>
+      </div>
+    );
+  };
 
   return (
     <div className="relative h-screen w-screen max-w-md mx-auto flex flex-col bg-brand-bg overflow-hidden font-mono shadow-2xl shadow-black">
@@ -172,10 +189,11 @@ const App: React.FC = () => {
         <GameScreen />
       </main>
       <NavBar />
-      
+
       {/* Render the active modal if there is one */}
       {renderModal()}
       <ADADebugFab />
+      <DebugOverlay />
     </div>
   );
 };

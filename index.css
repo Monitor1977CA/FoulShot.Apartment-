@@ -1,0 +1,46 @@
+:root {
+  /* Global layout variables used by the location panel and other layout logic.
+     Tweak these values to change reserved header/nav sizing app-wide. */
+  --app-header-height: 140px; /* conservative default to keep title visible */
+  --app-nav-height: 72px;    /* bottom nav / safe area reserve */
+
+  /* Computed expanded height for the panel (always present but translated when collapsed) */
+  --panel-calc-height: calc(100vh - var(--app-header-height) - var(--app-nav-height));
+  --panel-collapsed-height: 88px;
+  --panel-transition: 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The info panel keeps the expanded height but is translated down when collapsed so only the tab is visible.
+   This approach allows a single scroll container (overflow-y:auto) while the open/close animation is GPU accelerated. */
+#location-info-panel {
+  height: var(--panel-calc-height);
+  transform: translateY(calc(var(--panel-calc-height) - var(--panel-collapsed-height)));
+  transition: transform var(--panel-transition), box-shadow 200ms ease;
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+}
+
+#location-info-panel.open {
+  transform: translateY(0);
+}
+
+/* Small viewport fallbacks so the reserved header/nav sizes don't overwhelm tiny screens. */
+@media (max-height: 600px) {
+  :root {
+    --app-header-height: 120px;
+    --app-nav-height: 56px;
+    --panel-collapsed-height: 72px;
+  }
+}
+
+/* Ensure the tab button sits visually above the panel when collapsed */
+#location-panel-container > div[role="button"] {
+  z-index: 60;
+}
+
+/* Utility: keep existing transition styles from Tailwind but prefer CSS-driven transform for performance */
+#location-info-panel.transition-transform {
+  transition-property: transform, box-shadow;
+}
+
+/* End of file */

@@ -56,7 +56,7 @@ const NavBar: React.FC = () => {
   }, [dispatch, triggerADA, activeView]);
 
   return (
-    <nav className="w-full bg-brand-surface h-16 flex items-center border-t-2 border-brand-border shadow-lg">
+    <nav className="w-full bg-brand-surface h-16 flex-shrink-0 flex items-center border-t-2 border-brand-border shadow-lg relative z-60">
       <NavButton view="locations" label="Locations" icon={<Map size={24} />} isActive={activeView === 'locations'} onClick={handleNavClick} />
       <NavButton view="people" label="People" icon={<Users size={24} />} isActive={activeView === 'people'} onClick={handleNavClick} />
       <NavButton 

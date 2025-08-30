@@ -26,6 +26,13 @@ const ObjectCard: React.FC<{ object: StoryObject }> = ({ object }) => {
   const suspects = useSelector((state: RootState) => selectSuspects(state));
   const [isLensActive, setIsLensActive] = useState(false);
 
+  // --- Defensive defaults for possibly-missing compiled data ---
+  const componentsSafe = object.components || [];
+  const findingIdsSafe = object.findingIds || [];
+  const assignedToSuspectIdsSafe = object.assignedToSuspectIds || [];
+  const isEvidenceSafe = !!object.isEvidence;
+  const hasBeenUnlockedSafe = !!object.hasBeenUnlocked;
+
   // --- Latent Connection System ---
   // When this card is viewed, we check if this object resolves any pending latent connections.
   useEffect(() => {
@@ -35,7 +42,7 @@ const ObjectCard: React.FC<{ object: StoryObject }> = ({ object }) => {
   }, [object, dispatch]);
   
   const findings = useSelector((state: RootState) => 
-    object.findingIds?.map(id => selectObjectById(state, id)).filter(Boolean) as StoryObject[] || []
+    findingIdsSafe.map(id => selectObjectById(state, id)).filter(Boolean) as StoryObject[] || []
   );
 
   const handleGoBack = () => {
@@ -52,8 +59,8 @@ const ObjectCard: React.FC<{ object: StoryObject }> = ({ object }) => {
       type: 'assignSuspect',
       props: {
         objectId: object.id,
-        initialAssignments: object.isEvidence
-          ? { suspectIds: object.assignedToSuspectIds }
+        initialAssignments: isEvidenceSafe
+          ? { suspectIds: assignedToSuspectIdsSafe }
           : undefined,
       }
     }));
@@ -84,7 +91,7 @@ const ObjectCard: React.FC<{ object: StoryObject }> = ({ object }) => {
   const colorTreatment = object.isEvidence ? 'selectiveColor' : 'monochrome';
   const { imageUrl, isLoading } = useCardImage(object, colorTreatment);
 
-  const descriptionToShow = object.hasBeenUnlocked 
+  const descriptionToShow = hasBeenUnlockedSafe 
     ? object.description 
     : object.unidentifiedDescription || object.description;
     
@@ -120,7 +127,7 @@ const ObjectCard: React.FC<{ object: StoryObject }> = ({ object }) => {
           <ImageWithLoader imageUrl={imageUrl} isLoading={isLoading} alt={object.name} objectFit="cover" />
           
           <div className="absolute top-1/2 right-2 -translate-y-1/2 z-10 flex flex-col gap-2">
-            {object.components.map(component => {
+            {componentsSafe.map(component => {
                 const registryEntry = COMPONENT_REGISTRY[component.type];
                 if (!registryEntry) return null;
                 

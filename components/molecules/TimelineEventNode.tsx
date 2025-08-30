@@ -7,9 +7,9 @@
 import React, { useState } from 'react';
 import TimelineEventCard from './TimelineEventCard';
 import TimelineNodeWrapper from './TimelineNodeWrapper';
-import { selectAllEvidenceWithDetails } from '../../store/storySlice';
+import { Evidence, Character, StoryObject } from '../../types';
 
-type EvidenceWithDetails = ReturnType<typeof selectAllEvidenceWithDetails>[0];
+export type EvidenceWithDetails = Evidence & { details: Character | StoryObject | undefined };
 
 interface TimelineEventNodeProps {
   evidence: EvidenceWithDetails;

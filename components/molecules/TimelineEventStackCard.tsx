@@ -6,12 +6,12 @@
  */
 import React, { useMemo } from 'react';
 import TimelineEventCard from './TimelineEventCard';
-import { selectAllEvidenceWithDetails } from '../../store/storySlice';
+import { Evidence, Character, StoryObject } from '../../types';
 import { useCardImage } from '../../hooks/useCardImage';
 import ImageWithLoader from './ImageWithLoader';
 import { Link, HelpCircle } from 'lucide-react';
 
-type EvidenceWithDetails = ReturnType<typeof selectAllEvidenceWithDetails>[0];
+export type EvidenceWithDetails = Evidence & { details: Character | StoryObject | undefined };
 
 interface TimelineEventStackCardProps {
     anchor: EvidenceWithDetails;

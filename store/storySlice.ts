@@ -174,7 +174,7 @@ export const preloadKeyStoryAssets = createAsyncThunk(
       // Other images will be generated on-demand as the user navigates.
       
       const storyInfo = selectStoryInfo(state);
-      const victim = selectVictims(state)[0]; // Assuming there's always one victim
+      const victim = Object.values(state.story.characters.entities).find((c): c is Character => !!c && c.role === 'victim');
       const crimeScene = selectLocationById(state, storyInfo.crimeSceneId);
 
       // 1. Queue the victim's image
@@ -410,63 +410,98 @@ export const selectImageErrors = (state: RootState) => state.story.imageErrors;
 export const selectEvidenceStacks = (state: RootState) => state.story.evidenceStacks;
 export const selectDynamicHotspotsForLocation = (state: RootState, locationId: string) => state.story.dynamicHotspotCoords[locationId];
 
-export const selectVictims = createSelector(selectAllCharacters, (chars) => chars.filter(c => c.role === 'victim'));
-export const selectSuspects = createSelector(selectAllCharacters, (chars) => chars.filter(c => c.role === 'suspect'));
-export const selectWitnesses = createSelector(selectAllCharacters, (chars) => chars.filter(c => c.role === 'witness'));
-export const selectVisitedLocations = createSelector(
-  [selectAllLocations, (state: RootState) => state.ui.visitedLocationIds],
-  (locations, visitedIds) => locations.filter(loc => visitedIds.includes(loc.id))
-);
-
+// Resolve evidence items with their associated details (character or object) so
+// components can consume a single, stable structure. This helps avoid repeated
+// resolution logic across the codebase and keeps selectors memoized for perf.
 export const selectAllEvidenceWithDetails = createSelector(
-    [
-        (state: RootState) => state.story.evidence,
-        (state: RootState) => state.story.characters.entities,
-        (state: RootState) => state.story.objects.entities,
-    ],
-    (evidenceList, characterEntities, objectEntities) => {
-        return evidenceList.map(evidence => ({
-            ...evidence,
-            details: evidence.cardType === 'character' 
-                ? characterEntities[evidence.cardId] 
-                : objectEntities[evidence.cardId]
-        }));
-    }
+  (state: RootState) => state.story.evidence,
+  (state: RootState) => state.story.objects.entities,
+  (state: RootState) => state.story.characters.entities,
+  (evidence, objectEntities, charEntities) =>
+    evidence.map(ev => ({
+      ...ev,
+      details: ev.cardType === 'object' ? objectEntities[ev.cardId] : charEntities[ev.cardId] || undefined,
+    }))
 );
 
-export const selectUnassignedEvidence = createSelector(
-    selectAllObjects,
-    (objects) => objects.filter(o => o.isEvidence && o.assignedToSuspectIds.length === 0)
+// --- Stable ID lists to avoid creating new arrays in components ---
+export const selectObjectIds = createSelector(
+  (state: RootState) => state.story.objects.entities,
+  (entities) => Object.keys(entities)
+);
+export const selectLocationIds = createSelector(
+  (state: RootState) => state.story.locations.entities,
+  (entities) => Object.keys(entities)
+);
+export const selectEvidenceGroupIds = createSelector(
+  (state: RootState) => state.story.evidenceGroups.entities,
+  (entities) => Object.keys(entities)
+);
+export const selectCharacterIds = createSelector(
+  (state: RootState) => state.story.characters.entities,
+  (entities) => Object.keys(entities)
 );
 
-export const selectEvidenceForSuspect = createSelector(
-    [selectAllObjects, (state: RootState, suspectId: string) => suspectId],
-    (objects, suspectId) => objects.filter(o => o.isEvidence && o.assignedToSuspectIds.includes(suspectId))
+// --- Parameterized memoized selectors for common patterns ---
+export const selectCharactersByIds = createSelector(
+  [(state: RootState) => state.story.characters.entities, (_: RootState, ids: string[]) => ids],
+  (entities, ids) => ids.map(id => entities[id]).filter((c): c is Character => !!c)
 );
 
-export const selectObjectsInGroup = createSelector(
-    [selectObjectEntities, selectAllEvidenceGroups, (state: RootState, groupId: string) => groupId],
-    (objectEntities, allGroups, groupId) => {
-        const group = allGroups.find(g => g.id === groupId);
-        if (!group) return [];
-        return group.objectIds.map(id => objectEntities[id]).filter((obj): obj is StoryObject => !!obj);
-    }
+export const selectObjectsByIds = createSelector(
+  [(state: RootState) => state.story.objects.entities, (_: RootState, ids: string[]) => ids],
+  (entities, ids) => ids.map(id => entities[id]).filter((o): o is StoryObject => !!o)
 );
 
-const CATEGORY_MAP: { [key: string]: string } = {
-  socialMedia: 'socialMedia',
-  phoneLog: 'phone_log',
-  cctv: 'cctv_sighting',
-  records: 'financial_record',
-  file: 'police_file',
-};
-
+// Objects for a character collection (e.g., phone_logs, police_files)
 export const selectObjectsForCharacterCollection = createSelector(
-    [selectAllObjects, (state: RootState, characterId: string) => characterId, (state: RootState, characterId: string, collectionType: string) => collectionType],
-    (allObjects, characterId, collectionType) => {
-        const targetCategory = CATEGORY_MAP[collectionType] || collectionType;
-        return allObjects.filter(obj => obj.ownerCharacterId === characterId && obj.category === targetCategory);
-    }
+  [(state: RootState) => state.story.objects.entities, (_: RootState, characterId: string) => characterId, (_: RootState, _characterId: string, collectionType: string) => collectionType],
+  (entities, characterId, collectionType) => {
+    const all = Object.values(entities).filter((o): o is StoryObject => !!o);
+    return all.filter(o => {
+      if (!o) return false;
+      if (o.ownerCharacterId === characterId && o.category === collectionType) return true;
+      if (o.ownerCharacterId === characterId && Array.isArray(o.components) && o.components.some(comp => String(comp) === collectionType)) return true;
+      if (o.ownerCharacterId === characterId && Array.isArray(o.tags) && o.tags.some(tag => String(tag) === collectionType)) return true;
+      return false;
+    });
+  }
+);
+
+// Role-based selectors for characters used throughout the UI.
+export const selectVictims = createSelector(
+  (state: RootState) => state.story.characters.entities,
+  (entities) => Object.values(entities).filter((c): c is Character => !!c && c.role === 'victim')
+);
+
+export const selectSuspects = createSelector(
+  (state: RootState) => state.story.characters.entities,
+  (entities) => Object.values(entities).filter((c): c is Character => !!c && (c.role === 'suspect' || !!c.isSuspect))
+);
+
+export const selectWitnesses = createSelector(
+  (state: RootState) => state.story.characters.entities,
+  (entities) => Object.values(entities).filter((c): c is Character => !!c && c.role === 'witness')
+);
+
+// --- Visited locations selector (cross-slice, memoized) ---
+// Long-term: keep stable derived selectors in the store layer so components
+// can subscribe without allocating new arrays/objects every render.
+export const selectVisitedLocations = createSelector(
+  // reuse adapter selector to get stable list reference
+  (state: RootState) => selectAllLocations(state),
+  (state: RootState) => state.ui.visitedLocationIds,
+  (locations, visitedIds) => locations.filter((loc: Location) => !!loc && visitedIds.includes(loc.id))
+);
+
+// --- Objects-in-evidence-group selector ---
+export const selectObjectsInGroup = createSelector(
+  [(state: RootState) => state.story.evidenceGroups.entities, (_: RootState, groupId: string) => groupId, (state: RootState) => state.story.objects.entities],
+  (groups, groupId, objectEntities) => {
+    const group = groups[groupId];
+    if (!group || !Array.isArray(group.objectIds)) return [] as StoryObject[];
+    return group.objectIds.map(id => objectEntities[id]).filter((o): o is StoryObject => !!o);
+  }
 );
 
 export default storySlice.reducer;

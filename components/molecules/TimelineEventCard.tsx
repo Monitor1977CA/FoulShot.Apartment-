@@ -6,7 +6,7 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AppDispatch, RootState } from '../../store';
-import { selectAllEvidenceWithDetails, selectObjectById } from '../../store/storySlice';
+import { selectObjectById } from '../../store/storySlice';
 import { setActiveCard } from '../../store/uiSlice';
 import ImageWithLoader from './ImageWithLoader';
 import { Character, StoryObject, TimelineTag } from '../../types';
@@ -16,7 +16,7 @@ import { BrainCircuit, Hammer, Clock, ZoomIn } from 'lucide-react';
 import Button from '../atoms/Button';
 import { RARITY_CONFIG } from '../../config';
 
-type EvidenceWithDetails = ReturnType<typeof selectAllEvidenceWithDetails>[0];
+type EvidenceWithDetails = ReturnType<typeof selectObjectById>[0];
 
 const TAG_CONFIG = {
   motive: { Icon: BrainCircuit, label: 'Motive' },
@@ -36,9 +36,11 @@ const TimelineEventCard: React.FC<TimelineEventCardProps> = React.memo(({ eviden
     // --- Data Fetch & Image Loading ---
     const { imageUrl, isLoading } = useCardImage(cardData ?? null, 'selectiveColor');
     
-    const fullObjectData = useSelector((state: RootState) =>
-        evidence.cardType === 'object' ? selectObjectById(state, evidence.cardId) : null
-    );
+    // Avoid capturing the entire `evidence` object in the selector callback which
+    // could cause unnecessary recalculations. Compute the objectId once and use
+    // a stable selector invocation.
+    const objectId = evidence.cardType === 'object' ? evidence.cardId : null;
+    const fullObjectData = useSelector((state: RootState) => (objectId ? selectObjectById(state, objectId) : null));
 
     if (!cardData) return null;
 
@@ -78,7 +80,7 @@ const TimelineEventCard: React.FC<TimelineEventCardProps> = React.memo(({ eviden
                 
                 {/* --- Compact View --- */}
                 <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-brand-text-muted">{new Date(evidence.timestampCollected).toLocaleDateString()}</p>
+                    <p className="text-xs text-brand-text-muted">{(() => { try { return new Date(evidence.timestampCollected).toLocaleDateString(); } catch (e) { return ''; } })()}</p>
                     {fullObjectData?.tags && (
                       <div className="flex flex-wrap gap-1.5">
                         {fullObjectData.tags.map(tag => {

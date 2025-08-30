@@ -1,0 +1,29 @@
+name: Build content
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build compiled content
+        run: npm run build-content
+      - name: Validate content
+        run: npm run validate:content
+      - name: Upload compiled content
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-content
+          path: data/compiled/content.json

@@ -8,13 +8,13 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../store';
 import { showModal } from '../../store/uiSlice';
-import { Character, TimelineTag } from '../../types';
+import { Character, TimelineTag, Evidence, StoryObject } from '../../types';
 import MMOProgressView from './MMOProgressView';
 import Button from '../atoms/Button';
 import { Shield } from 'lucide-react';
 import { selectAllEvidenceWithDetails } from '../../store/storySlice';
 
-type EvidenceWithDetails = ReturnType<typeof selectAllEvidenceWithDetails>[0];
+type EvidenceWithDetails = Evidence & { details?: StoryObject | Character | undefined };
 
 interface CaseStrengthDashboardProps {
   suspect: Character;

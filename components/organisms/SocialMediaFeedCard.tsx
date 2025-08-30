@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Character, PlayerAction, StoryObject } from '../../types';
 import { AppDispatch, RootState } from '../../store';
 import { goBack, setActiveCard } from '../../store/uiSlice';
-import { selectObjectById } from '../../store/storySlice';
+import { selectObjectById, selectObjectIds, selectObjectEntities } from '../../store/storySlice';
 import ImageWithLoader from '../molecules/ImageWithLoader';
 import { useCardImage } from '../../hooks/useCardImage';
 import { useADA } from '../../hooks/useADA';
@@ -65,8 +65,11 @@ const SocialMediaFeedCard: React.FC<{ character: Character }> = ({ character }) 
     // Instead of selecting a constantly changing array of objects, we select the more stable
     // list of all object IDs and the map of entities. `useMemo` then derives a stable list
     // of post IDs, preventing re-renders unless the underlying data truly changes.
-    const allObjectIds = useSelector((state: RootState) => state.story.objects.ids);
-    const objectEntities = useSelector((state: RootState) => state.story.objects.entities);
+    // Use memoized selectors from the store to get stable references and avoid
+    // creating new arrays/objects on every render which can trigger unnecessary
+    // re-renders in connected components.
+    const allObjectIds = useSelector((state: RootState) => selectObjectIds(state));
+    const objectEntities = useSelector((state: RootState) => selectObjectEntities(state));
 
     const postIds = useMemo(() => {
         const ids = allObjectIds.filter(id => {
